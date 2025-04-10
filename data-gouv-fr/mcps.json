@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "data-gouv-fr": {
+      "command": "python",
+      "args": [ "/path/to/etalab-ia/mcp-servers/data-gouv-fr/server.py" ],
+      "env": {
+        "ALBERT_API_KEY": "...",
+        "ELASTICSEARCH_URL": "...",
+        "ELASTICSEARCH_PASSWORD": "..."
+      }
+    }
+  }
+}
