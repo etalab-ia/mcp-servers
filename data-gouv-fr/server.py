@@ -1,9 +1,10 @@
 import logging
 import os
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Context
 
 from clients.search import SearchEngineClient
+from core import format_chunk, rerank
 
 # Create an MCP server
 server_name = "mcp-data-gouv-fr"
@@ -53,26 +54,20 @@ def get_document_by_id(id: str) -> str:
 
 
 @mcp.tool()
-def search_albert_collections_v0(query: str) -> str:
+def search_albert_collections_v0(ctx: Context, query: str) -> str:
     # Using albert-api collection method
     """Search contextual information about the french public services"""
+    # how to create the collection/chunk ?
     return query
 
 
 @mcp.tool()
-def search_albert_collections_v1(query: str, limit: int = 7) -> str:
-    # Using Elasticsearch directly and pyalbert+reranker method
+def search_albert_collections_v1(ctx: Context, query: str, limit: int = 7) -> str:
+    # Using Elasticsearch directly and pyalbert chunking method
     """Search contextual information about the french public services"""
     collection_name = "chunks-v6"
     model_embedding = "BAAI/bge-m3"
     _id_name = "hash"
-
-    def format_chunk(chunk):
-        text = ""
-        text += f"url: {chunk['url']}\n"
-        text += f"title: {chunk['title']} " + (f" ({chunk['context']})" if chunk.get("context") else "") + "\n"
-        text += f"passage: {chunk['text']}\n"
-        return text
 
     se_config = dict(
         es_url=os.getenv("ELASTICSEARCH_URL"),
@@ -81,25 +76,20 @@ def search_albert_collections_v1(query: str, limit: int = 7) -> str:
     )
     se_client = SearchEngineClient(**se_config)
     hits = se_client.search(collection_name, query, limit=limit)
-    _sources = [x[_id_name] for x in hits]
     _contexts = [format_chunk(chunk) for chunk in hits]
-    return f"<context>{'\n\n'.join(_contexts)}</context>"
+    # _ids = [x[_id_name] for x in hits]
+    # _sources = [x["url"] for x in hits]
+    return "\n\n---\n\n".join(_contexts)
 
 
 @mcp.tool()
-def search_albert_collections_v2(query: str, limit: int = 7) -> str:
-    # Using Elasticsearch directly and pyalbert+reranker method
+def search_albert_collections_v2(ctx: Context, query: str, limit: int = 12) -> str:
+    # Using Elasticsearch directly and pyalbert chunking method + reranker
     """Search contextual information about the french public services"""
     collection_name = "chunks-v6"
     model_embedding = "BAAI/bge-m3"
+    model_rerank = "BAAI/bge-reranker-v2-m3"
     _id_name = "hash"
-
-    def format_chunk(chunk):
-        text = ""
-        text += f"url: {chunk['url']}\n"
-        text += f"title: {chunk['title']} " + (f" ({chunk['context']})" if chunk.get("context") else "") + "\n"
-        text += f"passage: {chunk['text']}\n"
-        return text
 
     se_config = dict(
         es_url=os.getenv("ELASTICSEARCH_URL"),
@@ -108,9 +98,12 @@ def search_albert_collections_v2(query: str, limit: int = 7) -> str:
     )
     se_client = SearchEngineClient(**se_config)
     hits = se_client.search(collection_name, query, limit=limit)
-    _sources = [x[_id_name] for x in hits]
     _contexts = [format_chunk(chunk) for chunk in hits]
-    return f"<context>{'\n\n'.join(_contexts)}</context>"
+    # _ids = [x[_id_name] for x in hits]
+    # _sources = [x["url"] for x in hits]
+
+    _contexts = rerank(query, _contexts, model=model_rerank)[:6]
+    return "\n\n---\n\n".join(_contexts)
 
 
 if __name__ == "__main__":
