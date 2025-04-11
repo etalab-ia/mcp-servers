@@ -6,9 +6,9 @@ from clients.utils import log_and_raise_for_status, retry
 
 def format_chunk(chunk: dict) -> str:
     text = ""
-    text += f"url: {chunk['url']}\n"
-    text += f"title: {chunk['title']} " + (f" ({chunk['context']})" if chunk.get("context") else "") + "\n"
-    text += f"passage: {chunk['text']}\n"
+    text += f"URL: {chunk['url']}\n"
+    text += f"TITLE: {chunk['title']} " + (f" ({chunk['context']})" if chunk.get("context") else "") + "\n"
+    text += f"PASSAGE: {chunk['text']}\n"
     return text
 
 

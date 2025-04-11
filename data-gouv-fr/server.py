@@ -1,7 +1,9 @@
 import logging
 import os
+from typing import Annotated
 
 from mcp.server.fastmcp import FastMCP, Context
+from pydantic import BaseModel, Field
 
 from clients.search import SearchEngineClient
 from core import format_chunk, rerank
@@ -54,7 +56,10 @@ def get_document_by_id(id: str) -> str:
 
 
 @mcp.tool()
-def search_albert_collections_v0(ctx: Context, query: str) -> str:
+def search_albert_collections_v0(
+    ctx: Context,
+    query: Annotated[str, Field(description="A curated, precise question from the original user input.")],
+) -> str:
     # Using albert-api collection method
     """Search contextual information about the french public services"""
     # how to create the collection/chunk ?
@@ -62,12 +67,16 @@ def search_albert_collections_v0(ctx: Context, query: str) -> str:
 
 
 @mcp.tool()
-def search_albert_collections_v1(ctx: Context, query: str, limit: int = 7) -> str:
+def search_albert_collections_v1(
+    ctx: Context,
+    query: Annotated[str, Field(description="A curated, precise question from the original user input.")],
+) -> str:
     # Using Elasticsearch directly and pyalbert chunking method
-    """Search contextual information about the french public services"""
+    """Search contextual information about the french public services."""
     collection_name = "chunks-v6"
     model_embedding = "BAAI/bge-m3"
     _id_name = "hash"
+    limit = 7
 
     se_config = dict(
         es_url=os.getenv("ELASTICSEARCH_URL"),
@@ -79,17 +88,24 @@ def search_albert_collections_v1(ctx: Context, query: str, limit: int = 7) -> st
     _contexts = [format_chunk(chunk) for chunk in hits]
     # _ids = [x[_id_name] for x in hits]
     # _sources = [x["url"] for x in hits]
-    return "\n\n---\n\n".join(_contexts)
+    context =  "\n\n---\n\n".join(_contexts)
+    context += "\n\n\nPS: To mention relevant contexts, only use the following markdown format: [text related to a context](URL of the context)"
+    return context
 
 
 @mcp.tool()
-def search_albert_collections_v2(ctx: Context, query: str, limit: int = 12) -> str:
+def search_albert_collections_v2(
+    ctx: Context,
+    query: Annotated[str, Field(description="A curated, precise question from the original user input.")],
+) -> str:
     # Using Elasticsearch directly and pyalbert chunking method + reranker
-    """Search contextual information about the french public services"""
+    """Search contextual information about the french public services."""
     collection_name = "chunks-v6"
     model_embedding = "BAAI/bge-m3"
     model_rerank = "BAAI/bge-reranker-v2-m3"
     _id_name = "hash"
+    limit = 20
+    limit_rerank = 7
 
     se_config = dict(
         es_url=os.getenv("ELASTICSEARCH_URL"),
@@ -102,8 +118,10 @@ def search_albert_collections_v2(ctx: Context, query: str, limit: int = 12) -> s
     # _ids = [x[_id_name] for x in hits]
     # _sources = [x["url"] for x in hits]
 
-    _contexts = rerank(query, _contexts, model=model_rerank)[:6]
-    return "\n\n---\n\n".join(_contexts)
+    _contexts = rerank(query, _contexts, model=model_rerank)[:limit_rerank]
+    context =  "\n\n---\n\n".join(_contexts)
+    context += "\n\n\nPS: To mention relevant contexts, only use the following markdown format: [text related to a context](URL of the context)"
+    return context
 
 
 if __name__ == "__main__":
