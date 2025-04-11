@@ -72,7 +72,7 @@ def search_albert_collections_v1(
     query: Annotated[str, Field(description="A curated, precise question from the original user input.")],
 ) -> str:
     # Using Elasticsearch directly and pyalbert chunking method
-    """Search contextual information about the french public services."""
+    """Search contextual information about the french public services (including passeport, carte d'identité, retraites, rendez-vous, amendes, démarches en ligen, gouvernement etc)."""
     collection_name = "chunks-v6"
     model_embedding = "BAAI/bge-m3"
     _id_name = "hash"
@@ -99,7 +99,7 @@ def search_albert_collections_v2(
     query: Annotated[str, Field(description="A curated, precise question from the original user input.")],
 ) -> str:
     # Using Elasticsearch directly and pyalbert chunking method + reranker
-    """Search contextual information about the french public services."""
+    """Search contextual information about the french public services (including passeport, carte d'identité, retraites, rendez-vous, amendes, démarches en ligen, gouvernement etc)."""
     collection_name = "chunks-v6"
     model_embedding = "BAAI/bge-m3"
     model_rerank = "BAAI/bge-reranker-v2-m3"
