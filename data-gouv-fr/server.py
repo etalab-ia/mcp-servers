@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Annotated
+from typing import Annotated, Optional
 
 from mcp.server.fastmcp import FastMCP, Context
 from pydantic import BaseModel, Field
@@ -27,15 +27,13 @@ RESET = "\033[0m"
 
 @mcp.prompt()
 def albert_simple() -> str:
-    prompt = "Tu es un agent de l'état qui répond aux questions des utilisateurs des services publiques de l'état Francais de manière claire, concréte et concise."
+    prompt = "Tu es un agent de l'état Français qui répond en langue française aux questions des usagers des services publiques et citoyens de manière précise, concrète et concise."
     return prompt
 
 
 @mcp.prompt()
-def albert_rag(chunks: list[str]) -> str:
-    # @TODO
-    # Load and format jinja template
-    prompt = ""
+def search_system_prompt() -> str:
+    prompt = "Tu recherche des données précises et à jour en utilisant les outils mis à disposition sur les services publiques français. Réponds de manière précise, conrète et concise."
     return prompt
 
 
@@ -47,6 +45,7 @@ def albert_rag(chunks: list[str]) -> str:
 @mcp.resource("document://{id}")
 def get_document_by_id(id: str) -> str:
     """Get the document from its reference ID."""
+    # TODO
     return f"Hello, {id}!"
 
 
@@ -69,14 +68,26 @@ def search_albert_collections_v0(
 @mcp.tool()
 def search_albert_collections_v1(
     ctx: Context,
-    query: Annotated[str, Field(description="A curated, precise question from the original user input.")],
+    query: Annotated[
+        str, Field(description="Une question précise formulé à partir de l'entrée originale de l'utilisateur.")
+    ],
+    topics: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Thème de la question (passeport, carte d'identité, retraites, rendez-vous, amendes et infractions, la loi, démarches en ligne, gouvernement, majeur ou mineur, les territoires etc)",
+        ),
+    ],
 ) -> str:
     # Using Elasticsearch directly and pyalbert chunking method
-    """Search contextual information about the french public services (including passeport, carte d'identité, retraites, rendez-vous, amendes, démarches en ligen, gouvernement etc)."""
-    collection_name = "chunks-v6"
-    model_embedding = "BAAI/bge-m3"
+    """Recherche de données précises et à jour pour les question concernant les services publiques français (les droits et devoir du citoyens, les lois etc)"""
+    # collection_name = "chunks-v6"
+    collection_name = "chunks-v13-04-25"
+    # model_embedding = "BAAI/bge-m3"
+    model_embedding = "bge-multilingual-gemma2"
     _id_name = "hash"
-    limit = 7
+    limit = 8
+    q = query + f" ({topics})"
 
     se_config = dict(
         es_url=os.getenv("ELASTICSEARCH_URL"),
@@ -84,11 +95,11 @@ def search_albert_collections_v1(
         model_embedding=model_embedding,
     )
     se_client = SearchEngineClient(**se_config)
-    hits = se_client.search(collection_name, query, limit=limit)
+    hits = se_client.search(collection_name, q, limit=limit)
     _contexts = [format_chunk(chunk) for chunk in hits]
     # _ids = [x[_id_name] for x in hits]
     # _sources = [x["url"] for x in hits]
-    context =  "\n\n---\n\n".join(_contexts)
+    context = "\n\n\n---\n\n\n".join(_contexts)
     context += "\n\n\nPS: To mention relevant contexts, only use the following markdown format: [text related to a context](URL of the context)"
     return context
 
@@ -96,16 +107,28 @@ def search_albert_collections_v1(
 @mcp.tool()
 def search_albert_collections_v2(
     ctx: Context,
-    query: Annotated[str, Field(description="A curated, precise question from the original user input.")],
+    query: Annotated[
+        str, Field(description="Une question précise formulé à partir de l'entrée originale de l'utilisateur.")
+    ],
+    topics: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Thème de la question (passeport, carte d'identité, retraites, rendez-vous, amendes et infractions, la loi, démarches en ligne, gouvernement, majeur ou mineur, les territoires etc)",
+        ),
+    ],
 ) -> str:
     # Using Elasticsearch directly and pyalbert chunking method + reranker
-    """Search contextual information about the french public services (including passeport, carte d'identité, retraites, rendez-vous, amendes, démarches en ligen, gouvernement etc)."""
-    collection_name = "chunks-v6"
-    model_embedding = "BAAI/bge-m3"
+    """Recherche de données précises et à jour pour les question concernant les services publiques français (les droits et devoir du citoyens, les lois etc)"""
+    # collection_name = "chunks-v6"
+    collection_name = "chunks-v13-04-25"
+    # model_embedding = "BAAI/bge-m3"
+    model_embedding = "bge-multilingual-gemma2"
     model_rerank = "BAAI/bge-reranker-v2-m3"
     _id_name = "hash"
     limit = 20
-    limit_rerank = 7
+    limit_rerank = 8
+    q = query + f" ({topics})"
 
     se_config = dict(
         es_url=os.getenv("ELASTICSEARCH_URL"),
@@ -113,13 +136,13 @@ def search_albert_collections_v2(
         model_embedding=model_embedding,
     )
     se_client = SearchEngineClient(**se_config)
-    hits = se_client.search(collection_name, query, limit=limit)
+    hits = se_client.search(collection_name, q, limit=limit)
     _contexts = [format_chunk(chunk) for chunk in hits]
     # _ids = [x[_id_name] for x in hits]
     # _sources = [x["url"] for x in hits]
 
-    _contexts = rerank(query, _contexts, model=model_rerank)[:limit_rerank]
-    context =  "\n\n---\n\n".join(_contexts)
+    _contexts = rerank(q, _contexts, model=model_rerank)[:limit_rerank]
+    context = "\n\n\n---\n\n\n".join(_contexts)
     context += "\n\n\nPS: To mention relevant contexts, only use the following markdown format: [text related to a context](URL of the context)"
     return context
 
