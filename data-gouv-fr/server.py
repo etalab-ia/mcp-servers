@@ -80,13 +80,13 @@ def search_albert_collections_v1(
     ],
 ) -> str:
     # Using Elasticsearch directly and pyalbert chunking method
-    """Recherche de données précises et à jour pour les question concernant les services publiques français (les droits et devoir du citoyens, les lois etc)"""
-    # collection_name = "chunks-v6"
-    collection_name = "chunks-v13-04-25"
-    # model_embedding = "BAAI/bge-m3"
-    model_embedding = "bge-multilingual-gemma2"
+    """Recherche de données précises et à jour pour les question concernant les services publiques français (les droits et devoir du citoyens, les lois, assurances, PV et amendes, carte d'identité et formulaire, etc)"""
+    collection_name = "chunks-v6"
+    model_embedding = "BAAI/bge-m3"
+    #collection_name = "chunks-v13-04-25"
+    #model_embedding = "bge-multilingual-gemma2"
     _id_name = "hash"
-    limit = 8
+    limit = 10
     q = query + f" ({topics})"
 
     se_config = dict(
@@ -119,15 +119,15 @@ def search_albert_collections_v2(
     ],
 ) -> str:
     # Using Elasticsearch directly and pyalbert chunking method + reranker
-    """Recherche de données précises et à jour pour les question concernant les services publiques français (les droits et devoir du citoyens, les lois etc)"""
-    # collection_name = "chunks-v6"
-    collection_name = "chunks-v13-04-25"
-    # model_embedding = "BAAI/bge-m3"
-    model_embedding = "bge-multilingual-gemma2"
+    """Recherche de données précises et à jour pour les question concernant les services publiques français (les droits et devoir du citoyens, les lois, assurances, PV et amendes, carte d'identité et formulaire, etc)"""
+    collection_name = "chunks-v6"
+    model_embedding = "BAAI/bge-m3"
+    #collection_name = "chunks-v13-04-25"
+    #model_embedding = "bge-multilingual-gemma2"
     model_rerank = "BAAI/bge-reranker-v2-m3"
     _id_name = "hash"
     limit = 20
-    limit_rerank = 8
+    limit_rerank = 10
     q = query + f" ({topics})"
 
     se_config = dict(
